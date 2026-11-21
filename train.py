@@ -61,6 +61,10 @@ def get_parse():
     parser.add_argument('--backbone', default="cvt13", type=str, help='backbone network for applying')
     parser.add_argument('--head', default="FSRA_CNN", type=str, help='head type for applying')
     parser.add_argument('--head_pool', default="max", type=str, help='head pooling type for applying')
+    parser.add_argument('--milestones', default="70,110", type=str,
+                        help='epochs at which lr is multiplied by 0.1, e.g. "20,35"')
+    parser.add_argument('--save_interval', default=10, type=int,
+                        help='save a checkpoint every N epochs (the last epoch is always saved)')
     
 
     opt = parser.parse_args()
@@ -162,7 +166,7 @@ def train_model(model, opt, optimizer, scheduler, dataloaders, dataset_sizes):
                             epoch_acc2, lr_backbone, lr_other))
 
         scheduler.step()
-        if epoch % 10 == 9 and epoch >= 110:
+        if (epoch + 1) % opt.save_interval == 0 or epoch == num_epochs - 1:
             save_network(model, opt.name, epoch)
 
         time_elapsed = time.time() - since
