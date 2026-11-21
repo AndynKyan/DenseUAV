@@ -6,6 +6,7 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from tool.utils_server import load_network
+from tool.utils import device
 import yaml
 import argparse
 import torch
@@ -86,7 +87,7 @@ for i in ["000009","000013","000015","000016","000018","000035","000039","000116
     #print(img.shape)
     model = load_network(opt)
 
-    model = model.eval().cuda()
+    model = model.eval().to(device)
 
     # data = next(iter(dataloaders['satellite']))
     # img, label = data
@@ -99,7 +100,7 @@ for i in ["000009","000013","000015","000016","000018","000035","000039","000116
         # x = model.model_1.model.layer2(x)
         # x = model.model_1.model.layer3(x)
         # output = model.model_1.model.layer4(x)
-        features = model.model_1.transformer(img.cuda())
+        features = model.model_1.transformer(img.to(device))
         part_features = features[:,1:]
         part_features = part_features.view(part_features.size(0),int(math.sqrt(part_features.size(1))),int(math.sqrt(part_features.size(1))),part_features.size(2))
         output = part_features.permute(0,3,1,2)

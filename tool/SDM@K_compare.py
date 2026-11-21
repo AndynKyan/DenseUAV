@@ -39,7 +39,7 @@ def euclideanDistance(query, gallery):
     A = gallery - query
     A_T = A.transpose()
     distance = np.matmul(A, A_T)
-    mask = np.eye(distance.shape[0], dtype=np.bool8)
+    mask = np.eye(distance.shape[0], dtype=bool)
     distance = distance[mask]
     distance = np.sqrt(distance.reshape(-1))
     return distance

@@ -4,7 +4,7 @@ sys.path.append("../../")
 import yaml
 import argparse
 
-from tool.utils import load_network, calc_flops_params
+from tool.utils import load_network, calc_flops_params, device
 
 parser = argparse.ArgumentParser(description='Training')
 parser.add_argument('--name', default='resnet',
@@ -21,7 +21,7 @@ with open(config_path, 'r') as stream:
 for cfg, value in config.items():
     setattr(opt, cfg, value)
 
-model = load_network(opt).cuda()
+model = load_network(opt).to(device)
 model = model.eval()
 
 # thop计算MACs

@@ -406,7 +406,7 @@ class refine_ft_net(nn.Module):
                     ymax = ymax+DI[:,1].cpu().detach()*per_w/2
                     box = torch.stack([xmin, ymin, xmax, ymax], dim=1).type(torch.int)
                     index = torch.range(0,x.size(0)-1,dtype=torch.int)
-                    crops = roi_align(x.type(torch.FloatTensor),box.type(torch.FloatTensor).cpu(),index).cuda()
+                    crops = roi_align(x.type(torch.FloatTensor),box.type(torch.FloatTensor).cpu(),index).to(x.device)
                     # crops = crops.view(crops.size(0),crops.size(1))
                 else:
                     crops = x[:, :, int(xmin):int(xmax), int(ymin):int(ymax)]

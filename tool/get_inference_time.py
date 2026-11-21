@@ -4,7 +4,7 @@ sys.path.append("../")
 import yaml
 import argparse
 import torch
-from tool.utils import load_network, calc_flops_params
+from tool.utils import load_network, calc_flops_params, device
 import time
 
 
@@ -24,7 +24,7 @@ with open(config_path, 'r') as stream:
 for cfg, value in config.items():
     setattr(opt, cfg, value)
 
-model = load_network(opt).cuda()
+model = load_network(opt).to(device)
 model = model.eval()
 
 # thop计算MACs
@@ -33,8 +33,8 @@ macs, params = calc_flops_params(
 input_size_drone = (1, 3, opt.test_h, opt.test_w)
 input_size_satellite = (1, 3, opt.test_h, opt.test_w)
 
-inputs_drone = torch.randn(input_size_drone).cuda()
-inputs_satellite = torch.randn(input_size_satellite).cuda()
+inputs_drone = torch.randn(input_size_drone).to(device)
+inputs_satellite = torch.randn(input_size_satellite).to(device)
 
 # 预热
 for _ in range(10):

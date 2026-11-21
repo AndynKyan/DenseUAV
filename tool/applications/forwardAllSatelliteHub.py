@@ -14,7 +14,7 @@ import os
 import scipy.io
 import yaml
 import math
-from tool.utils import load_network
+from tool.utils import load_network, device
 from tqdm import tqdm
 import warnings
 from datasets.Dataloader_University import DataLoader_Inference
@@ -68,7 +68,7 @@ for s in str_ms:
     ms.append(math.sqrt(s_f))
 
 # set gpu ids
-if len(gpu_ids)>0:
+if device.type == "cuda" and len(gpu_ids)>0:
     torch.cuda.set_device(gpu_ids[0])
     cudnn.benchmark = True
 
@@ -96,7 +96,7 @@ image_datasets = DataLoader_Inference(root=opt.root,transforms=data_transforms)
 
 dataloaders = torch.utils.data.DataLoader(image_datasets, batch_size=opt.batchsize,
                                          shuffle=False, num_workers=opt.num_worker)
-use_gpu = torch.cuda.is_available()
+use_gpu = device.type != "cpu"
 
 
 
@@ -112,7 +112,7 @@ def extract_feature(model,dataloaders, view_index = 1):
         #     ff = torch.FloatTensor(n,512,opt.block).zero_().cuda()
         # else:
         #     ff = torch.FloatTensor(n, 2048).zero_().cuda()
-        input_img = Variable(img.cuda())
+        input_img = img.to(device)
         outputs, _ = model(input_img, None)
         outputs = outputs[1]
         ff=outputs
@@ -136,8 +136,7 @@ def extract_feature(model,dataloaders, view_index = 1):
 # Load Collected data Trained model
 model = load_network(opt)
 model = model.eval()
-if use_gpu:
-    model = model.cuda()
+model = model.to(device)
 # Extract feature
 since = time.time()
 

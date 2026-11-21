@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from tool.utils import load_network
+from tool.utils import load_network, device
 import yaml
 import argparse
 import torch
@@ -55,7 +55,7 @@ def normalization(data):
     return (data - np.min(data)) / _range
 
 model = load_network(opt)
-model = model.eval().cuda()
+model = model.eval().to(device)
 
 print(opt.data_dir)
 for i in ["000090","000013","000015","000016","000018","000035","000039","000116","000130"]:
@@ -69,7 +69,7 @@ for i in ["000090","000013","000015","000016","000018","000035","000039","000116
 
     with torch.no_grad():
         # print(model)
-        features = model.backbone(img.cuda())
+        features = model.backbone(img.to(device))
         # pos_embed = model.backbone.pos_embed
         if opt.backbone=="resnet50":
             output = features

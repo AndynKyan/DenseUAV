@@ -7,6 +7,7 @@ from torchvision import transforms
 from PIL import Image
 import yaml
 from tool.utils_server import load_network
+from tool.utils import device
 from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 import os
@@ -90,7 +91,7 @@ def extract_feature(img, model):
     count = 0
     n, c, h, w = img.size()
     count += n
-    input_img = Variable(img.cuda())
+    input_img = img.to(device)
     outputs, _ = model(input_img, None)
     ff = outputs
     # norm feature
@@ -146,18 +147,19 @@ opts.nclasses = config['nclasses']
 opts.droprate = config['droprate']
 opts.share = config['share']
 opts.checkpoint = "net_119.pth"
-torch.cuda.set_device("cuda:0")
-cudnn.benchmark = True
+if device.type == "cuda":
+    torch.cuda.set_device("cuda:0")
+    cudnn.benchmark = True
 
 model = load_network(opts)
 model = model.eval()
-model = model.cuda()
+model = model.to(device)
 
 ######################################################################
 result = scipy.io.loadmat(opts.galleryFeature)
 gallery_feature = torch.FloatTensor(result['features'])
 gallery_label = result['labels']
-gallery_feature = gallery_feature.cuda()
+gallery_feature = gallery_feature.to(device)
 
 satellitePosInfoDict = generateDictOfGalleryPosInfo()
 

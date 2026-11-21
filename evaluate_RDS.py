@@ -12,7 +12,7 @@ import torch
 import argparse
 import cv2
 # from datasets.SiamUAV import SiamUAV_test
-from tool.utils import load_network
+from tool.utils import load_network, device
 from torchvision import transforms
 import os
 import glob
@@ -62,7 +62,7 @@ def create_model(opt):
     # state_dict = torch.load(opt.checkpoint)
     # model.load_state_dict(state_dict)
     model = load_network(opt)
-    model = model.cuda()
+    model = model.to(device)
     model.eval()
     return model
 
@@ -195,7 +195,7 @@ def euclideanDistance(query, gallery):
     A = gallery - query
     A_T = A.transpose()
     distance = np.matmul(A, A_T)
-    mask = np.eye(distance.shape[0], dtype=np.bool8)
+    mask = np.eye(distance.shape[0], dtype=bool)
     distance = distance[mask]
     distance = np.sqrt(distance.reshape(-1))
     return distance
@@ -262,8 +262,8 @@ def test(model, dataloader, opt):
     start_time = time.time()
     SDM_scores = 0
     for uav, satellite, X, Y, UAV_image_path, Satellite_image_path, UAV_GPS, Satellite_INFO,pos_infos in tqdm(dataloader):
-        z = uav.cuda()
-        x = torch.cat(satellite,dim=0).cuda()
+        z = uav.to(device)
+        x = torch.cat(satellite,dim=0).to(device)
         z_feat = model(z,None)[0].data.cpu()
         x_feat = torch.FloatTensor()
         for x_single in x:

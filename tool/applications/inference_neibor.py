@@ -15,7 +15,7 @@ from torch.autograd import Variable
 from datasets.queryDataset import CenterCrop
 import yaml
 import torch.backends.cudnn as cudnn
-from tool.utils import load_network
+from tool.utils import load_network, device
 
 # Jiliang TN30.32576454772815 TE120.35248328688216 BN30.318951172904185 BE120.3631189084238
 # Jingmao TN30.325763471673625 TE120.37341802729506 BN30.320529681696023 BE120.38174250997761
@@ -148,7 +148,7 @@ def extract_feature(img, model,opts):
     count = 0
     n, c, h, w = img.size()
     count += n
-    input_img = Variable(img.cuda())
+    input_img = img.to(device)
     outputs, _ = model(input_img, None)
     ff = outputs
     # norm feature
@@ -182,12 +182,13 @@ def loadNetwork(opts):
     opts.droprate = config['droprate']
     opts.share = config['share']
     opts.checkpoint = "net_119.pth"
-    torch.cuda.set_device("cuda:0")
-    cudnn.benchmark = True
+    if device.type == "cuda":
+        torch.cuda.set_device("cuda:0")
+        cudnn.benchmark = True
 
     model = load_network(opts)
     model = model.eval()
-    model = model.cuda()
+    model = model.to(device)
     return model
 
 def main():

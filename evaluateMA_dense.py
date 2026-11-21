@@ -3,6 +3,7 @@ import scipy.io
 import torch
 import numpy as np
 import os
+from tool.utils import device
 from torchvision import datasets
 import matplotlib
 # matplotlib.use('agg')
@@ -32,8 +33,8 @@ gallery_feature = torch.FloatTensor(result['gallery_f'])
 gallery_info = result['gallery_infos']
 gallery_path = result['gallery_path']
 
-query_feature = query_feature.cuda()
-gallery_feature = gallery_feature.cuda()
+query_feature = query_feature.to(device)
+gallery_feature = gallery_feature.to(device)
 
 
 #######################################################################
