@@ -6,14 +6,13 @@ import torch
 import torch.nn as nn
 
 from torch.autograd import Variable
-from torch.cuda.amp import autocast, GradScaler
 import torch.backends.cudnn as cudnn
 import time
 from optimizers.make_optimizer import make_optimizer
 # from models.model import make_model
 from models.taskflow import make_model
 from datasets.make_dataloader import make_dataset
-from tool.utils import save_network, copyfiles2checkpoints, get_preds, get_logger, calc_flops_params, set_seed
+from tool.utils import save_network, copyfiles2checkpoints, get_preds, get_logger, calc_flops_params, set_seed, device
 import warnings
 from losses.loss import Loss
 
@@ -83,7 +82,10 @@ def train_model(model, opt, optimizer, scheduler, dataloaders, dataset_sizes):
     use_gpu = opt.use_gpu
     num_epochs = opt.num_epochs
     since = time.time()
-    scaler = GradScaler()
+    # autocast/GradScaler chi bat khi co CUDA
+    use_cuda = device.type == "cuda"
+    use_scaler = use_cuda and opt.autocast
+    scaler = torch.amp.GradScaler("cuda", enabled=use_scaler)
     nnloss = Loss(opt)
     for epoch in range(num_epochs):
         logger.info('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -103,20 +105,17 @@ def train_model(model, opt, optimizer, scheduler, dataloaders, dataset_sizes):
             now_batch_size = inputs.shape[0]
             if now_batch_size < opt.batchsize:  # skip the last batch
                 continue
-            if use_gpu:
-                inputs = Variable(inputs.cuda().detach())
-                inputs3 = Variable(inputs3.cuda().detach())
-                labels = Variable(labels.cuda().detach())
-                labels3 = Variable(labels3.cuda().detach())
-            else:
-                inputs, labels = Variable(inputs), Variable(labels)
+            inputs = inputs.to(device).detach()
+            inputs3 = inputs3.to(device).detach()
+            labels = labels.to(device).detach()
+            labels3 = labels3.to(device).detach()
 
             # 梯度清零
             optimizer.zero_grad()
 
             # start_time = time.time()
             # 模型前向传播
-            with autocast():
+            with torch.autocast(device_type="cuda", enabled=use_cuda):
                 outputs, outputs2 = model(inputs, inputs3)
             # print("model_time:{}".format(time.time()-start_time))
             # 计算损失
@@ -124,7 +123,7 @@ def train_model(model, opt, optimizer, scheduler, dataloaders, dataset_sizes):
                 outputs, outputs2, labels, labels3)
             # start_time = time.time()
             # 反向传播
-            if opt.autocast:
+            if use_scaler:
                 scaler.scale(loss).backward()
                 scaler.step(optimizer)
                 scaler.update()
@@ -186,10 +185,11 @@ if __name__ == '__main__':
         if gid >= 0:
             gpu_ids.append(gid)
 
-    use_gpu = torch.cuda.is_available()
+    use_gpu = device.type != "cpu"
     opt.use_gpu = use_gpu
-    # set gpu ids
-    if len(gpu_ids) > 0:
+    print("Using device: {}".format(device))
+    # set gpu ids (chi khi co CUDA)
+    if device.type == "cuda" and len(gpu_ids) > 0:
         torch.cuda.set_device(gpu_ids[0])
         cudnn.benchmark = True
 
@@ -200,8 +200,7 @@ if __name__ == '__main__':
 
     optimizer_ft, exp_lr_scheduler = make_optimizer(model, opt)
 
-    if use_gpu:
-        model = model.cuda()
+    model = model.to(device)
     # 移动文件到指定文件夹
     copyfiles2checkpoints(opt)
 

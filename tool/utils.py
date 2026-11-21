@@ -12,6 +12,18 @@ from thop import profile, clever_format
 import math
 
 
+def get_device():
+    """Chon thiet bi theo thu tu: cuda -> mps -> cpu."""
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+device = get_device()
+
+
 def get_logger(filename, verbosity=1, name=None):
     level_dict = {0: logging.DEBUG, 1: logging.INFO, 2: logging.WARNING}
     formatter = logging.Formatter(
@@ -104,8 +116,7 @@ def save_network(network, dirname, epoch_label):
         save_filename = 'net_%s.pth' % epoch_label
     save_path = os.path.join('./checkpoints', dirname, save_filename)
     torch.save(network.cpu().state_dict(), save_path)
-    if torch.cuda.is_available:
-        network.cuda()
+    network.to(device)
 
 
 class UnNormalize(object):
@@ -146,7 +157,7 @@ def load_network(opt):
     model = make_model(opt)
     # print('Load the model from %s' % save_filename)
     network = model
-    network.load_state_dict(torch.load(save_filename))
+    network.load_state_dict(torch.load(save_filename, map_location="cpu"))
     return network
 
 
@@ -186,8 +197,8 @@ def calc_flops_params(model,
                       input_size_drone,
                       input_size_satellite,
                       ):
-    inputs_drone = torch.randn(input_size_drone).cuda()
-    inputs_satellite = torch.randn(input_size_satellite).cuda()
+    inputs_drone = torch.randn(input_size_drone).to(device)
+    inputs_satellite = torch.randn(input_size_satellite).to(device)
     total_ops, total_params = profile(
         model, (inputs_drone, inputs_satellite,), verbose=False)
     macs, params = clever_format([total_ops, total_params], "%.3f")
@@ -196,7 +207,8 @@ def calc_flops_params(model,
 
 def set_seed(seed):
     torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False

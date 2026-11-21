@@ -15,7 +15,7 @@ import os
 import scipy.io
 import yaml
 import math
-from tool.utils import load_network
+from tool.utils import load_network, device
 from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore")
@@ -65,7 +65,8 @@ for s in str_ms:
     s_f = float(s)
     ms.append(math.sqrt(s_f))
 
-if len(gpu_ids) > 0:
+print("Using device: {}".format(device))
+if device.type == "cuda" and len(gpu_ids) > 0:
     torch.cuda.set_device(gpu_ids[0])
     cudnn.benchmark = True
 
@@ -96,7 +97,7 @@ image_datasets = {**image_datasets_query, **image_datasets_gallery}
 
 dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=opt.batchsize,
                                               shuffle=False, num_workers=opt.num_worker) for x in ['gallery_satellite', 'query_drone']}
-use_gpu = torch.cuda.is_available()
+use_gpu = device.type != "cpu"
 
 
 def fliplr(img):
@@ -133,7 +134,7 @@ def extract_feature(model, dataloaders, view_index=1):
         for i in range(2):
             if(i == 1):
                 img = fliplr(img)
-            input_img = Variable(img.cuda())
+            input_img = img.to(device)
             if view_index == 1:
                 outputs, _ = model(input_img, None)
             elif view_index == 3:
@@ -179,8 +180,7 @@ model = load_network(opt)
 print("这是%s的结果" % opt.checkpoint)
 # model.classifier.classifier = nn.Sequential()
 model = model.eval()
-if use_gpu:
-    model = model.cuda()
+model = model.to(device)
 
 # Extract feature
 since = time.time()

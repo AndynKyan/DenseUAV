@@ -3,6 +3,7 @@ import torch
 import numpy as np
 #import time
 import os
+from tool.utils import device
 
 #######################################################################
 # Evaluate
@@ -68,10 +69,10 @@ if multi:
     m_result = scipy.io.loadmat('multi_query.mat')
     mquery_feature = torch.FloatTensor(m_result['mquery_f'])
     mquery_label = m_result['mquery_label'][0]
-    mquery_feature = mquery_feature.cuda()
+    mquery_feature = mquery_feature.to(device)
 
-query_feature = query_feature.cuda(0)
-gallery_feature = gallery_feature.cuda(0)
+query_feature = query_feature.to(device)
+gallery_feature = gallery_feature.to(device)
 
 print(query_feature.shape)
 print(gallery_feature.shape)

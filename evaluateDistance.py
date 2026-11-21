@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import json
 from tqdm import tqdm
 import math
+from tool.utils import device
 
 
 #####################################################################
@@ -40,7 +41,7 @@ def euclideanDistance(query, gallery):
     A = gallery - query
     A_T = A.transpose()
     distance = np.matmul(A, A_T)
-    mask = np.eye(distance.shape[0], dtype=np.bool8)
+    mask = np.eye(distance.shape[0], dtype=bool)
     distance = distance[mask]
     distance = np.sqrt(distance.reshape(-1))
     return distance
@@ -151,10 +152,10 @@ if '__main__' == __name__:
         mquery_feature = torch.FloatTensor(m_result['mquery_f'])
         mquery_cam = m_result['mquery_cam'][0]
         mquery_label = m_result['mquery_label'][0]
-        mquery_feature = mquery_feature.cuda()
+        mquery_feature = mquery_feature.to(device)
 
-    query_feature = query_feature.cuda()
-    gallery_feature = gallery_feature.cuda()
+    query_feature = query_feature.to(device)
+    gallery_feature = gallery_feature.to(device)
 
 
     #######################################################################
