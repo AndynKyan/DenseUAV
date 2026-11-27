@@ -78,7 +78,8 @@ def make_dataset(opt):
     samper = Sampler_University(
         image_datasets, batchsize=opt.batchsize, sample_num=opt.sample_num)
     dataloaders = torch.utils.data.DataLoader(image_datasets, batch_size=opt.batchsize,
-                                              sampler=samper, num_workers=opt.num_worker, pin_memory=True, collate_fn=train_collate_fn)
+                                              sampler=samper, num_workers=opt.num_worker, pin_memory=True, collate_fn=train_collate_fn,
+                                              persistent_workers=opt.num_worker > 0)
     dataset_sizes = {x: len(image_datasets) *
                      opt.sample_num for x in ['satellite', 'drone']}
     class_names = image_datasets.cls_names

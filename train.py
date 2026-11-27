@@ -64,6 +64,7 @@ def get_parse():
                         help='epochs at which lr is multiplied by 0.1, e.g. "20,35"')
     parser.add_argument('--save_interval', default=10, type=int,
                         help='save a checkpoint every N epochs (the last epoch is always saved)')
+    parser.add_argument('--seed', default=666, type=int, help='random seed (666 = original repo value)')
     
 
     opt = parser.parse_args()
@@ -131,6 +132,14 @@ def train_model(model, opt, optimizer, scheduler, dataloaders, dataset_sizes):
                 loss.backward()
                 optimizer.step()
             # print("backward_time:{}".format(time.time()-start_time))
+            if epoch == 0 and not getattr(opt, "_mem_logged", False):
+                opt._mem_logged = True
+                if device.type == "mps":
+                    logger.info("MPS memory after first iteration: current_allocated {:.1f} MB, driver_allocated {:.1f} MB".format(
+                        torch.mps.current_allocated_memory() / 2**20, torch.mps.driver_allocated_memory() / 2**20))
+                elif device.type == "cuda":
+                    logger.info("CUDA max_memory_allocated after first iteration: {:.1f} MB".format(
+                        torch.cuda.max_memory_allocated() / 2**20))
 
             # 统计损失
             running_loss += loss.item() * now_batch_size
@@ -175,9 +184,8 @@ def train_model(model, opt, optimizer, scheduler, dataloaders, dataset_sizes):
 
 
 if __name__ == '__main__':
-    set_seed(666)
-
     opt = get_parse()
+    set_seed(opt.seed)
     str_ids = opt.gpu_ids.split(',')
     gpu_ids = []
     for str_id in str_ids:
