@@ -1,0 +1,7 @@
+# Camera sensor parameters, keyed by the EXIF "Model" field.
+# sensor_width_mm is the width of the full 4000-px image side.
+FC2204:            # DJI Mini 2, 1/2.3" CMOS
+  sensor_width_mm: 6.17
+  image_width_px: 4000
+  image_height_px: 3000
+  note: "Kiểm từ EXIF: FocalLength 4.386 mm, FocalLengthIn35mmFilm 24."
