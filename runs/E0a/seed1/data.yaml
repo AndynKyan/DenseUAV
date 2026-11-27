@@ -1,0 +1,62 @@
+# Data config for the forest demo (M2/M3). Paths support "~".
+paths:
+  uav_dir: "/Users/researchmac/DATA IMAGES/Rung_Sac_Demo"
+  ortho_png: "/Users/researchmac/DATA IMAGES/Rung_Sac_demo.png"
+  out_root: "~/DenseUAV_Forest"          # outside the repo, never committed
+  cameras: "configs/cameras.yaml"
+
+metadata:
+  max_pitch_dev_deg: 5.0                 # keep |GimbalPitch + 90| <= 5
+
+north_up:
+  rotate_sign: -1                        # PIL img.rotate(rotate_sign * gimbal_yaw, expand=True); verified by SIFT (sign +1 leaves ~-17.6 deg)
+  # Ground side actually seen by the camera = footprint_scale * side from RelativeAltitude.
+  # Measured with SIFT (similarity fit UAV north-up vs ortho tile) on NON-test images DJI_0282..0315:
+  # median 0.836 [0.810..0.862]. Likely cause: canopy top is above the take-off point.
+  footprint_scale: 0.836
+  # Residual rotation after north-up, measured the same way: -4.2 deg (constant). NOT corrected,
+  # it is the realistic compass error that test queries also have.
+  out_size: 512                          # saved size of UAV north-up crops and positive tiles
+
+ortho:
+  max_nodata_frac: 0.10                  # drop tiles with > 10% alpha==0 (or outside the map)
+  edge_flag_nodata: 0.05                 # test images whose positive tile has more no-data get flag=edge
+
+split:
+  n_test: 14                             # southernmost images go to test
+  buffer_factor: 1.0                     # buffer_m = buffer_factor * footprint_max   (spec: 2x, >= 200 m; see docs/demo_deviations.md D3)
+  buffer_min_m: 0.0
+  val_block_m: 60.0                      # along-track length of the val block (middle of the train segment)
+
+pseudo:
+  # Class centres on a regular grid aligned with the flight line (see docs/demo_deviations.md D16).
+  seed: 2026
+  grid_spacing_m: 14.0                   # ~0.25 x F; one class per grid centre
+  sat_scale: 1.0                         # satellite tile side = sat_scale * S (S = UAV north-up side)
+  variants_per_class: 12                 # drone views per class
+  shift_max_m: 3.0                       # drone variant centre shift, uniform in a disc of this radius
+  scale_range: [0.8, 1.25]               # drone variant side = scale * S
+  rot_deg: 15.0                          # drone variant rotation in [-rot_deg, +rot_deg]
+  blur_sigma: [0.0, 1.5]
+  max_tries_per_variant: 10              # resample a variant if its tile has too much no-data
+  merge_real_within_m: 10.0              # real train/val image closer than this to a grid centre joins that class (14 m grid: farthest point ~9.9 m)
+
+color_C1:                                # spec section 6, preset C1
+  brightness: 0.2
+  contrast: 0.2
+  gamma: [0.8, 1.2]
+  saturation: 0.1
+  hue: 0.02
+  white_balance: [0.92, 1.08]
+  shadow_polygons: [1, 3]
+  shadow_darken: [0.2, 0.5]
+
+ids:                                     # 6-digit integer class folders
+  real_offset: 0                         # real image DJI_0282 -> 000282
+  pseudo_train_offset: 100000
+  pseudo_val_offset: 200000
+
+gallery:                                 # used in M3
+  footprint_set_m: [45, 50, 56, 63, 70]  # ~0.8-1.25 x S (S = 55.6 m UAV north-up side), see D17
+  stride_frac: 0.25
+  out_size: 224

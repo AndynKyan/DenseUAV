@@ -1,0 +1,112 @@
+871a3f0359c2b1f1084b2d7a42b0dc9db1ae0b2e
+
+ M CLAUDE.md
+ M finetune_trees.sh
+ M train.py
+?? configs/
+?? data_prep/
+?? docs/demo_deviations.md
+?? docs/repo_map.md
+?? eval/
+?? localize/
+?? results/
+?? runs/
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 5fe7f4a..70fdf1b 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -1,4 +1 @@
+-# CLAUDE.md
+-
+-Đầu mỗi phiên, đọc và tuân theo các quy tắc trong @agent.md.
+-Phiên trong VS Code là EXTENSION (chỉ đọc). Phiên `claude` mở trong terminal là TERMINAL (được sửa).
++@agent.md
+diff --git a/finetune_trees.sh b/finetune_trees.sh
+index 83c2c59..4c6f58a 100644
+--- a/finetune_trees.sh
++++ b/finetune_trees.sh
+@@ -1,26 +1,30 @@
+-# Fine-tune the DenseUAV baseline on a custom (tree / vegetation) dataset.
++# Train DenseUAV (ViT-S, SingleBranch) on the forest dataset, experiment E0a.
++# Starts from ImageNet weights: timm loads vit_small_patch16_224 with pretrained=True.
++# No DenseUAV baseline checkpoint is used (the download link is dead).
+ # Data layout must match DenseUAV:
+ #   $root_dir/train/drone/<id>/*.JPG        $root_dir/train/satellite/<id>/*.tif
+ #   $root_dir/test/query_drone/<id>/...     $root_dir/test/gallery_satellite/<id>/...
+ #   $root_dir/Dense_GPS_ALL.txt             (only needed for the SDM metric)
+ # <id> folders must be integers (test.py parses them with int()).
+ 
+-name="trees_ft"
+-root_dir="/path/to/TreeUAV"                     # <-- change
+-pretrained="checkpoints/baseline/net_119.pth"   # <-- DenseUAV baseline weights (see README)
++name="forest_E0a"
++root_dir="$HOME/DenseUAV_Forest"
+ data_dir=$root_dir/train
+ test_dir=$root_dir/test
+ gpu_ids=0
+ num_worker=8
+ 
+-# Smaller lr and fewer epochs than training from scratch (0.01 / 120 epochs).
+-lr=0.003
+-num_epochs=40
+-milestones="25,35"
++# Same lr and epochs as the original baseline (0.01, 120 epochs); lr x0.1 at epochs 80 and 110.
++lr=0.01
++num_epochs=120
++milestones="80,110"
+ save_interval=10
+ batchsize=16
++# Each class is repeated sample_num times in a row (Sampler_University, np.repeat): with 29 classes,
++# 29*4/16 -> 7 iterations per epoch, and every batch holds 4 classes x 4 samples (see docs/demo_deviations.md D18).
++sample_num=4
+ 
+-# Must match the pretrained baseline so its weights load.
++# Same architecture as the DenseUAV baseline.
+ backbone="ViTS-224"
+ head="SingleBranch"
+ head_pool="avg"
+@@ -42,15 +46,16 @@ rr="uav,satellite"
+ 
+ python train.py --name $name --data_dir $data_dir --gpu_ids $gpu_ids --num_worker $num_worker \
+                 --lr $lr --num_epochs $num_epochs --milestones $milestones --save_interval $save_interval \
+-                --batchsize $batchsize --sample_num 1 --block $block \
++                --batchsize $batchsize --sample_num $sample_num --block $block \
+                 --backbone $backbone --head $head --head_pool $head_pool --num_bottleneck $num_bottleneck \
+-                --h $h --w $w --load_from $pretrained \
++                --h $h --w $w \
+                 --ra $ra --re $re --cj $cj --rr $rr \
+                 --cls_loss $cls_loss --feature_loss $feature_loss --kl_loss $kl_loss
+ 
+-last_ckpt=$(printf "net_%03d.pth" $((num_epochs - 1)))
+-cd checkpoints/$name
+-python test.py --name $name --test_dir $test_dir --gpu_ids $gpu_ids --num_worker $num_worker --checkpoint $last_ckpt
+-python evaluate_gpu.py
+-python evaluateDistance.py --root_dir $root_dir
+-cd ../../
++# Đánh giá bằng localize/ + eval/ (M3), không dùng test.py / evaluate_gpu.py / evaluateDistance.py.
++# last_ckpt=$(printf "net_%03d.pth" $((num_epochs - 1)))
++# cd checkpoints/$name
++# python test.py --name $name --test_dir $test_dir --gpu_ids $gpu_ids --num_worker $num_worker --checkpoint $last_ckpt
++# python evaluate_gpu.py
++# python evaluateDistance.py --root_dir $root_dir
++# cd ../../
+diff --git a/train.py b/train.py
+index 2dfa5df..2cf9c4c 100755
+--- a/train.py
++++ b/train.py
+@@ -131,6 +131,14 @@ def train_model(model, opt, optimizer, scheduler, dataloaders, dataset_sizes):
+                 loss.backward()
+                 optimizer.step()
+             # print("backward_time:{}".format(time.time()-start_time))
++            if epoch == 0 and not getattr(opt, "_mem_logged", False):
++                opt._mem_logged = True
++                if device.type == "mps":
++                    logger.info("MPS memory after first iteration: current_allocated {:.1f} MB, driver_allocated {:.1f} MB".format(
++                        torch.mps.current_allocated_memory() / 2**20, torch.mps.driver_allocated_memory() / 2**20))
++                elif device.type == "cuda":
++                    logger.info("CUDA max_memory_allocated after first iteration: {:.1f} MB".format(
++                        torch.cuda.max_memory_allocated() / 2**20))
+ 
+             # 统计损失
+             running_loss += loss.item() * now_batch_size
